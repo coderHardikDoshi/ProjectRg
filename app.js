@@ -12,9 +12,29 @@ const { json } = require('stream/consumers')
 const uuid = require('short-uuid')
 const { type } = require('os')
 
+
 const app = express()
 app.use(express.json())//this is a middleware,it's parsing the json which was sent via post rquest and converting to json object
 
+const {createUserHandler,
+    getUserHandler,
+    checkInput,
+    getUserById,
+    updateUserById,
+    deleteUserById
+} = require("./controllers/userController");
+
+const{
+    deleteProductById,
+    updateProductById,
+    getProductById,
+    createProductHandler,
+    getProductHandler,
+} = require("./controllers/productController")
+
+const User = require("./models/userModel");
+
+const Product = require("./models/productModel");
 /**app.use((req,res,next)=>{
     console.log(`${req.path} send to ${req.method} `)
     next()
@@ -31,130 +51,22 @@ mongoose
 });
 /**DB conection ends here */
 
-const userSchema = new mongoose.Schema({
-    name:{
-        type:String,
-        required:true,
-    },
-    email:{
-        type:String,
-        required:true,
-        unique:true,
-    },
-    password:{
-        type:String,
-        required:true,
-        minlength:8,
-    },
-    confirmPassword:{
-        type:String,
-        required:true,
-        minlength:8,
-        validate:{
-            validator:function(){
-                return this.password === this.confirmPassword;
-            }
-        }
-    },
-    createdAt:Date,
-    id:String
-});
-
-const User = new mongoose.model("User",userSchema);
-
-
-app.post('/api/user',createUserHandler)//post request
+/**user routes */
+app.post('/api/user',checkInput,createUserHandler)//post request
 app.get('/api/user',getUserHandler)//get request
 app.get('/api/user/:id',getUserById)//dynamic routing
+app.patch('/api/user/:id',updateUserById)
+app.delete('/api/user/:id',deleteUserById)
 
-async function getUserHandler(req,res) {
-    try{
-    let msg = ''
-    const userData = await User.find()
+/**product routes*/
+app.post('/api/product',checkInput,createProductHandler)//post request
+app.get('/api/product',getProductHandler)
+app.get('/api/product/:id',getProductById)
+app.patch('/api/product/:id',updateProductById)
+app.delete('/api/product/:id',deleteProductById)
 
-    if(userData.length==0){
-        msg = "User not found"
-    }
-    else{
-        msg = " User found below:-"
-    }
-    res.json({
-        statusCode : 200,
-        status : 'success',
-        message : msg,
-        data: userData
-    })
-    }
-    catch(err){
-        console.log('We have got an error',err);
-        res.json({
-            statusCode:500,
-            message:'Error here',
-            data:err
-        })
-    }
-}
 
-async function createUserHandler(req,res){
-   // const id = uuid.generate();
-   try{
-    const userDetails = req.body;
-    let isEmpty = null;
-    if(Object.keys(userDetails).length===0){
-        isEmpty = true;
-    }
-    else{
-        isEmpty = false;
-    }
-        if(isEmpty){
-            console.log("user here:",userDetails)
-            console.log("check one:",isEmpty)
-            res.json({
-                status:400,
-                message:"Bad Request , body cannot be empty"
-            })
-        }
-    else{
-        console.log("User details",userDetails)
-        const user = await User.create(userDetails)
-        res.status(201).json({
-            message:"User created successfully.",
-            status:"201",
-            data:user
-        })
-    }
-}
-catch(err){
-    console.log("erorr here",err);
-    res.status(500).json({
-        status:"500",
-        data:err
-    })
-}
-    };
 
-async function getUserById(req,res){
-    const {id} = req.params;
-   // const user = userData.find((user)=>user.id==id)
-   const user = await User.findById(id);
-    if(!user){
-        res.status(404).json({
-            status:404,
-            message:'Not found'
-        })
-        throw new Error("User not found");
-    }
-    else{
-        //user.age = user.age +1;
-        res.status(200).json({
-            status:200,
-            message : 'user found',
-            data : user
-        })
-        console.log("yayy found them",user)
-    }
-
-}
 
 app.use(function(req,res){
     res.status(404).send('Not Found')
